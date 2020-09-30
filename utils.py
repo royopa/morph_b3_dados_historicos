@@ -11,14 +11,16 @@ from zipfile import ZipFile, error
 import dask.dataframe as dd
 import pandas as pd
 import requests
+os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 import scraperwiki
+
 from bizdays import Calendar, load_holidays
 from pandas.core.arrays.sparse import dtype
 from tqdm import tqdm
 
 from layout_b3 import LayoutB3
 
-os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
+
 
 
 def load_useragents():
@@ -166,14 +168,12 @@ def gerar_arquivo_final(extraidos_path, base_path):
     df = df.compute()
     df['DATA'] = pd.to_datetime(
         df['DATA'], format='%Y%m%d', errors='coerce')
-    df['DATVEN'] = pd.to_datetime(
-        df['DATVEN'], format='%Y%m%d', errors='coerce')
 
     print('Importando para a base scraperwiki')
     import_scraperwiki(df)
 
-    print('Salvando csv de saída', base_path)
-    df.to_csv('%s/final.csv' % base_path, mode='a', header=True, index=False)
+    #print('Salvando csv de saída', base_path)
+    #df.to_csv('%s/final.csv' % base_path, mode='a', header=True, index=False)
 
 
 def import_scraperwiki(df):
@@ -187,9 +187,8 @@ def import_scraperwiki(df):
     ]
 
     for index, row in enumerate(df.to_dict('records')):
-        row['DATA'] = row['DATA'].date
-        row['DATVEN'] = row['DATVEN'].date
-        print('Importando', index+1, 'de', len(df))
+        row['DATA'] = row['DATA'].to_pydatetime()
+        # print('Importando', index+1, 'de', len(df))
         try:
             scraperwiki.sqlite.save(unique_keys=keys, data=row)
         except Exception as e:

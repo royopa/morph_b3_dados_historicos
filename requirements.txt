@@ -1,0 +1,6 @@
+requests
+dask[complete]
+tqdm
+scraperwiki
+bizdays
+pandas
