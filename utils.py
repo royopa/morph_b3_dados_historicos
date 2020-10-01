@@ -7,18 +7,17 @@ import random
 from datetime import datetime, timedelta
 from glob import glob
 from zipfile import ZipFile, error
-
+import time
 import dask.dataframe as dd
 import pandas as pd
 import requests
+os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 import scraperwiki
 from bizdays import Calendar, load_holidays
 from pandas.core.arrays.sparse import dtype
 from tqdm import tqdm
 
 from layout_b3 import LayoutB3
-
-os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 
 
 def load_useragents():
@@ -203,6 +202,7 @@ def gerar_arquivo_final(extraidos_path, base_path):
 
         print('Importando para a base scraperwiki')
         import_scraperwiki(df)
+        time.sleep(120)
         print('ok')
 
 
