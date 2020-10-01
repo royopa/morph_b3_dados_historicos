@@ -154,53 +154,56 @@ def descompactar_arquivos_zip(download_path, extraidos_path):
 def gerar_arquivo_final(extraidos_path, base_path):
     layout = LayoutB3()
 
-    df = dd.read_fwf(
-        f'{extraidos_path}/COTAHIST*',
-        colspecs=layout.get_posicoes(),
-        skiprows=1,
-        skipfooter=1,
-        names=layout.get_campos(),
-        encoding='latin1',
-        dtype={'PRAZOT': 'object'}
-    )
+    for file_name in os.listdir(extraidos_path):
+        file_path = os.path.join(extraidos_path, file_name)
+        
+        print('Importando arquivo', file_path)
+        
+        df = dd.read_fwf(
+            file_path,
+            colspecs=layout.get_posicoes(),
+            skiprows=1,
+            skipfooter=1,
+            names=layout.get_campos(),
+            encoding='latin1',
+            dtype={'PRAZOT': 'object'}
+        )
 
-    df['TIPREG'] = df['TIPREG']
-    df['DATA'] = df['DATA']
-    df['CODBDI'] = df['CODBDI'].astype(str)
-    df['CODNEG'] = df['CODNEG'].astype(str)
-    df['TPMERC'] = df['TPMERC']
-    df['NOMRES'] = df['NOMRES'].astype(str)
-    df['ESPECI'] = df['ESPECI'].astype(str)
-    df['PRAZOT'] = df['PRAZOT'].astype(str)
-    df['MODREF'] = df['MODREF'].astype(str)
-    df['PREABE'] = df['PREABE'].astype(float)
-    df['PREMAX'] = df['PREMAX'].astype(float)
-    df['PREMIN'] = df['PREMIN'].astype(float)
-    df['PREMED'] = df['PREMED'].astype(float)
-    df['PREULT'] = df['PREULT'].astype(float)
-    df['PREOFC'] = df['PREOFC'].astype(float)
-    df['PREOFV'] = df['PREOFV'].astype(float)
-    df['TOTNEG'] = df['TOTNEG']
-    df['QUATOT'] = df['QUATOT']
-    df['VOLTOT'] = df['VOLTOT'].astype(float)
-    df['PREEXE'] = df['PREEXE'].astype(float)
-    df['INDOPC'] = df['INDOPC']
-    df['DATVEN'] = df['DATVEN']
-    df['FATCOT'] = df['FATCOT']
-    df['PTOEXE'] = df['PTOEXE'].astype(float)
-    df['CODISI'] = df['CODISI'].astype(str)
-    df['DISMES'] = df['DISMES']
+        df['TIPREG'] = df['TIPREG']
+        df['DATA'] = df['DATA']
+        df['CODBDI'] = df['CODBDI'].astype(str)
+        df['CODNEG'] = df['CODNEG'].astype(str)
+        df['TPMERC'] = df['TPMERC']
+        df['NOMRES'] = df['NOMRES'].astype(str)
+        df['ESPECI'] = df['ESPECI'].astype(str)
+        df['PRAZOT'] = df['PRAZOT'].astype(str)
+        df['MODREF'] = df['MODREF'].astype(str)
+        df['PREABE'] = df['PREABE'].astype(float)
+        df['PREMAX'] = df['PREMAX'].astype(float)
+        df['PREMIN'] = df['PREMIN'].astype(float)
+        df['PREMED'] = df['PREMED'].astype(float)
+        df['PREULT'] = df['PREULT'].astype(float)
+        df['PREOFC'] = df['PREOFC'].astype(float)
+        df['PREOFV'] = df['PREOFV'].astype(float)
+        df['TOTNEG'] = df['TOTNEG']
+        df['QUATOT'] = df['QUATOT']
+        df['VOLTOT'] = df['VOLTOT'].astype(float)
+        df['PREEXE'] = df['PREEXE'].astype(float)
+        df['INDOPC'] = df['INDOPC']
+        df['DATVEN'] = df['DATVEN']
+        df['FATCOT'] = df['FATCOT']
+        df['PTOEXE'] = df['PTOEXE'].astype(float)
+        df['CODISI'] = df['CODISI'].astype(str)
+        df['DISMES'] = df['DISMES']
 
-    # Converte campo de data
-    df = df.compute()
-    df['DATA'] = pd.to_datetime(
-        df['DATA'], format='%Y%m%d', errors='coerce')
+        # Converte campo de data
+        df = df.compute()
+        df['DATA'] = pd.to_datetime(
+            df['DATA'], format='%Y%m%d', errors='coerce')
 
-    print('Importando para a base scraperwiki')
-    import_scraperwiki(df)
-
-    print('Salvando csv de saída', base_path)
-    df.to_csv('%s/final.csv' % base_path, mode='a', header=True, index=False)
+        print('Importando para a base scraperwiki')
+        import_scraperwiki(df)
+        print('ok')
 
 
 def import_scraperwiki(df):
