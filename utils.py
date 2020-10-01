@@ -11,16 +11,14 @@ from zipfile import ZipFile, error
 import dask.dataframe as dd
 import pandas as pd
 import requests
-os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 import scraperwiki
-
 from bizdays import Calendar, load_holidays
 from pandas.core.arrays.sparse import dtype
 from tqdm import tqdm
 
 from layout_b3 import LayoutB3
 
-
+os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 
 
 def load_useragents():
@@ -150,19 +148,48 @@ def descompactar_arquivos_zip(download_path, extraidos_path):
         print('Extraindo zip files folder', path_to_zip_file)
         with ZipFile(path_to_zip_file, 'r') as zip_ref:
             zip_ref.extractall(extraidos_path)
-        os.remove(path_to_zip_file)
+        # os.remove(path_to_zip_file)
 
 
 def gerar_arquivo_final(extraidos_path, base_path):
     layout = LayoutB3()
 
     df = dd.read_fwf(
-        f'{extraidos_path}/*.TXT',
+        f'{extraidos_path}/COTAHIST*',
         colspecs=layout.get_posicoes(),
         skiprows=1,
         skipfooter=1,
-        names=layout.get_campos()
+        names=layout.get_campos(),
+        encoding='latin1',
+        dtype={'PRAZOT': 'object'}
     )
+
+    df['TIPREG'] = df['TIPREG']
+    df['DATA'] = df['DATA']
+    df['CODBDI'] = df['CODBDI'].astype(str)
+    df['CODNEG'] = df['CODNEG'].astype(str)
+    df['TPMERC'] = df['TPMERC']
+    df['NOMRES'] = df['NOMRES'].astype(str)
+    df['ESPECI'] = df['ESPECI'].astype(str)
+    df['PRAZOT'] = df['PRAZOT'].astype(str)
+    df['MODREF'] = df['MODREF'].astype(str)
+    df['PREABE'] = df['PREABE'].astype(float)
+    df['PREMAX'] = df['PREMAX'].astype(float)
+    df['PREMIN'] = df['PREMIN'].astype(float)
+    df['PREMED'] = df['PREMED'].astype(float)
+    df['PREULT'] = df['PREULT'].astype(float)
+    df['PREOFC'] = df['PREOFC'].astype(float)
+    df['PREOFV'] = df['PREOFV'].astype(float)
+    df['TOTNEG'] = df['TOTNEG']
+    df['QUATOT'] = df['QUATOT']
+    df['VOLTOT'] = df['VOLTOT'].astype(float)
+    df['PREEXE'] = df['PREEXE'].astype(float)
+    df['INDOPC'] = df['INDOPC']
+    df['DATVEN'] = df['DATVEN']
+    df['FATCOT'] = df['FATCOT']
+    df['PTOEXE'] = df['PTOEXE'].astype(float)
+    df['CODISI'] = df['CODISI'].astype(str)
+    df['DISMES'] = df['DISMES']
 
     # Converte campo de data
     df = df.compute()
@@ -172,8 +199,8 @@ def gerar_arquivo_final(extraidos_path, base_path):
     print('Importando para a base scraperwiki')
     import_scraperwiki(df)
 
-    #print('Salvando csv de saída', base_path)
-    #df.to_csv('%s/final.csv' % base_path, mode='a', header=True, index=False)
+    print('Salvando csv de saída', base_path)
+    df.to_csv('%s/final.csv' % base_path, mode='a', header=True, index=False)
 
 
 def import_scraperwiki(df):
