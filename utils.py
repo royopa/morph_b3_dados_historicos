@@ -4,20 +4,23 @@ import csv
 import datetime
 import os
 import random
+import time
 from datetime import datetime, timedelta
 from glob import glob
 from zipfile import ZipFile, error
-import time
+
 import dask.dataframe as dd
 import pandas as pd
 import requests
-os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 import scraperwiki
 from bizdays import Calendar, load_holidays
 from pandas.core.arrays.sparse import dtype
+from sqlalchemy import create_engine
 from tqdm import tqdm
 
 from layout_b3 import LayoutB3
+
+os.environ['SCRAPERWIKI_DATABASE_NAME'] = 'sqlite:///data.sqlite'
 
 
 def load_useragents():
@@ -155,9 +158,9 @@ def gerar_arquivo_final(extraidos_path, base_path):
 
     for file_name in os.listdir(extraidos_path):
         file_path = os.path.join(extraidos_path, file_name)
-        
+
         print('Importando arquivo', file_path)
-        
+
         df = dd.read_fwf(
             file_path,
             colspecs=layout.get_posicoes(),
@@ -165,7 +168,7 @@ def gerar_arquivo_final(extraidos_path, base_path):
             skipfooter=1,
             names=layout.get_campos(),
             encoding='latin1',
-            dtype={'PRAZOT': 'object'}
+            dtype={'PRAZOT': 'object'},
         )
 
         df['TIPREG'] = df['TIPREG']
@@ -198,10 +201,13 @@ def gerar_arquivo_final(extraidos_path, base_path):
         # Converte campo de data
         df = df.compute()
         df['DATA'] = pd.to_datetime(
-            df['DATA'], format='%Y%m%d', errors='coerce')
+            df['DATA'], format='%Y%m%d', errors='coerce'
+        ).dt.date
 
         print('Importando para a base scraperwiki')
         import_scraperwiki(df)
+
+        print('Aguardando 120 segundos')
         time.sleep(120)
         print('ok')
 
@@ -216,9 +222,15 @@ def import_scraperwiki(df):
         'CODISI'
     ]
 
-    for index, row in enumerate(df.to_dict('records')):
-        row['DATA'] = row['DATA'].to_pydatetime()
-        # print('Importando', index+1, 'de', len(df))
+    if os.path.exists('data.sqlite') is False:
+        engine = create_engine('sqlite:///data.sqlite', echo=True)
+        sqlite_connection = engine.connect()
+        print('Importando usando pandas to_sql')
+        df.to_sql('swdata', sqlite_connection,
+                  if_exists='replace', index=False)
+        return True
+
+    for row in enumerate(df.to_dict('records')):
         try:
             scraperwiki.sqlite.save(unique_keys=keys, data=row)
         except Exception as e:
