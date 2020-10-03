@@ -222,13 +222,21 @@ def import_scraperwiki(df):
         'CODISI'
     ]
 
-    if os.path.exists('data.sqlite') is False:
-        engine = create_engine('sqlite:///data.sqlite', echo=True)
-        sqlite_connection = engine.connect()
-        print('Importando usando pandas to_sql')
-        df.to_sql('swdata', sqlite_connection,
-                  if_exists='replace', index=False)
-        return True
+    # if os.path.exists('data.sqlite') is False:
+    print('Salvando csv de saída', len(df), 'registros')
+    df.to_csv('base_completa.csv', index=False)
+
+    engine = create_engine('sqlite:///data.sqlite', echo=True)
+    sqlite_connection = engine.connect()
+    print('Importando usando pandas to_sql')
+    df.to_sql(
+        'swdata',
+        sqlite_connection,
+        if_exists='append',
+        index=False
+    )
+
+    return True
 
     for row in enumerate(df.to_dict('records')):
         try:
