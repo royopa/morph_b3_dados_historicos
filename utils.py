@@ -208,7 +208,6 @@ def gerar_arquivo_final(extraidos_path, base_path):
         import_scraperwiki(df)
 
         print('Aguardando 120 segundos')
-        time.sleep(120)
         print('ok')
 
 
@@ -224,7 +223,7 @@ def import_scraperwiki(df):
 
     # if os.path.exists('data.sqlite') is False:
     print('Salvando csv de saída', len(df), 'registros')
-    df.to_csv('base_completa.csv', index=False)
+    df.to_csv('base_completa.csv', index=False, mode='a')
 
     engine = create_engine('sqlite:///data.sqlite', echo=True)
     sqlite_connection = engine.connect()
