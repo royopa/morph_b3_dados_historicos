@@ -8,7 +8,7 @@ import utils
 
 url_base = 'http://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_A'
 
-urls = [f'{url_base}{i}.zip' for i in range(1995, datetime.today().year+1)]
+urls = [f'{url_base}{i}.zip' for i in range(2000, datetime.today().year+1)]
 
 utils.prepare_download_folder('downloads')
 
@@ -18,6 +18,8 @@ for url in reversed(urls):
 
     if os.path.exists(file_path) is False:
         utils.download(url, None, file_path)
+
+    break
 
 
 processa.main()

@@ -10,6 +10,7 @@ from glob import glob
 from zipfile import ZipFile, error
 
 import dask.dataframe as dd
+import numpy as np
 import pandas as pd
 import requests
 import scraperwiki
@@ -161,54 +162,55 @@ def gerar_arquivo_final(extraidos_path, base_path):
 
         print('Importando arquivo', file_path)
 
-        df = dd.read_fwf(
+        reader = pd.read_fwf(
             file_path,
             colspecs=layout.get_posicoes(),
             skiprows=1,
-            skipfooter=1,
+            # skipfooter=1,
             names=layout.get_campos(),
             encoding='latin1',
             dtype={'PRAZOT': 'object'},
+            low_memory=True,
+            chunksize=75000
         )
 
-        df['TIPREG'] = df['TIPREG']
-        df['DATA'] = df['DATA']
-        df['CODBDI'] = df['CODBDI'].astype(str)
-        df['CODNEG'] = df['CODNEG'].astype(str)
-        df['TPMERC'] = df['TPMERC']
-        df['NOMRES'] = df['NOMRES'].astype(str)
-        df['ESPECI'] = df['ESPECI'].astype(str)
-        df['PRAZOT'] = df['PRAZOT'].astype(str)
-        df['MODREF'] = df['MODREF'].astype(str)
-        df['PREABE'] = df['PREABE'].astype(float)
-        df['PREMAX'] = df['PREMAX'].astype(float)
-        df['PREMIN'] = df['PREMIN'].astype(float)
-        df['PREMED'] = df['PREMED'].astype(float)
-        df['PREULT'] = df['PREULT'].astype(float)
-        df['PREOFC'] = df['PREOFC'].astype(float)
-        df['PREOFV'] = df['PREOFV'].astype(float)
-        df['TOTNEG'] = df['TOTNEG']
-        df['QUATOT'] = df['QUATOT']
-        df['VOLTOT'] = df['VOLTOT'].astype(float)
-        df['PREEXE'] = df['PREEXE'].astype(float)
-        df['INDOPC'] = df['INDOPC']
-        df['DATVEN'] = df['DATVEN']
-        df['FATCOT'] = df['FATCOT']
-        df['PTOEXE'] = df['PTOEXE'].astype(float)
-        df['CODISI'] = df['CODISI'].astype(str)
-        df['DISMES'] = df['DISMES']
+        for df in reader:
+            df['TIPREG'] = df['TIPREG']
+            df['DATA'] = df['DATA']
+            df['CODBDI'] = df['CODBDI'].astype(str)
+            df['CODNEG'] = df['CODNEG'].astype(str)
+            df['TPMERC'] = df['TPMERC']
+            df['NOMRES'] = df['NOMRES'].astype(str)
+            df['ESPECI'] = df['ESPECI'].astype(str)
+            df['PRAZOT'] = df['PRAZOT'].astype(str)
+            df['MODREF'] = df['MODREF'].astype(str)
+            df['PREABE'] = df['PREABE'].astype(float)
+            df['PREMAX'] = df['PREMAX'].astype(float)
+            df['PREMIN'] = df['PREMIN'].astype(float)
+            df['PREMED'] = df['PREMED'].astype(float)
+            df['PREULT'] = df['PREULT'].astype(float)
+            df['PREOFC'] = df['PREOFC'].astype(float)
+            df['PREOFV'] = df['PREOFV'].astype(float)
+            df['TOTNEG'] = df['TOTNEG']
+            df['QUATOT'] = df['QUATOT']
+            df['VOLTOT'] = df['VOLTOT'].astype(float)
+            df['PREEXE'] = df['PREEXE'].astype(float)
+            df['INDOPC'] = df['INDOPC']
+            df['DATVEN'] = df['DATVEN']
+            df['FATCOT'] = df['FATCOT']
+            df['PTOEXE'] = df['PTOEXE'].astype(float)
+            df['CODISI'] = df['CODISI'].astype(str)
+            df['DISMES'] = df['DISMES']
 
-        # Converte campo de data
-        df = df.compute()
-        df['DATA'] = pd.to_datetime(
-            df['DATA'], format='%Y%m%d', errors='coerce'
-        ).dt.date
+            #df, NAlist = reduce_mem_usage(df)
 
-        print('Importando para a base scraperwiki')
-        import_scraperwiki(df)
+            # Converte campo de data
+            df['DATA'] = pd.to_datetime(
+                df['DATA'], format='%Y%m%d', errors='coerce'
+            ).dt.date
 
-        print('Aguardando 120 segundos')
-        print('ok')
+            print('Importando para a base scraperwiki')
+            import_scraperwiki(df)
 
 
 def import_scraperwiki(df):
@@ -222,8 +224,8 @@ def import_scraperwiki(df):
     ]
 
     # if os.path.exists('data.sqlite') is False:
-    print('Salvando csv de saída', len(df), 'registros')
-    df.to_csv('base_completa.csv', index=False, mode='a')
+    #print('Salvando csv de saída', len(df), 'registros')
+    #df.to_csv('base_completa.csv', index=False, mode='a')
 
     engine = create_engine('sqlite:///data.sqlite', echo=True)
     sqlite_connection = engine.connect()
@@ -242,3 +244,69 @@ def import_scraperwiki(df):
             scraperwiki.sqlite.save(unique_keys=keys, data=row)
         except Exception as e:
             print("Error occurred:", e)
+
+
+def reduce_mem_usage(props):
+    start_mem_usg = props.memory_usage().sum() / 1024**2
+    print("Memory usage of properties dataframe is :", start_mem_usg, " MB")
+    NAlist = []  # Keeps track of columns that have missing values filled in.
+    for col in props.columns:
+        if props[col].dtype != object:  # Exclude strings
+
+            # Print current column type
+            print("******************************")
+            print("Column: ", col)
+            print("dtype before: ", props[col].dtype)
+
+            # make variables for Int, max and min
+            IsInt = False
+            mx = props[col].max()
+            mn = props[col].min()
+
+            # Integer does not support NA, therefore, NA needs to be filled
+            if not np.isfinite(props[col]).all():
+                NAlist.append(col)
+                props[col].fillna(mn-1, inplace=True)
+
+            # test if column can be converted to an integer
+            asint = props[col].fillna(0).astype(np.int64)
+            result = (props[col] - asint)
+            result = result.sum()
+            if result > -0.01 and result < 0.01:
+                IsInt = True
+
+            # Make Integer/unsigned Integer datatypes
+            if IsInt:
+                if mn >= 0:
+                    if mx < 255:
+                        props[col] = props[col].astype(np.uint8)
+                    elif mx < 65535:
+                        props[col] = props[col].astype(np.uint16)
+                    elif mx < 4294967295:
+                        props[col] = props[col].astype(np.uint32)
+                    else:
+                        props[col] = props[col].astype(np.uint64)
+                else:
+                    if mn > np.iinfo(np.int8).min and mx < np.iinfo(np.int8).max:
+                        props[col] = props[col].astype(np.int8)
+                    elif mn > np.iinfo(np.int16).min and mx < np.iinfo(np.int16).max:
+                        props[col] = props[col].astype(np.int16)
+                    elif mn > np.iinfo(np.int32).min and mx < np.iinfo(np.int32).max:
+                        props[col] = props[col].astype(np.int32)
+                    elif mn > np.iinfo(np.int64).min and mx < np.iinfo(np.int64).max:
+                        props[col] = props[col].astype(np.int64)
+
+            # Make float datatypes 32 bit
+            else:
+                props[col] = props[col].astype(np.float32)
+
+            # Print new column type
+            print("dtype after: ", props[col].dtype)
+            print("******************************")
+
+    # Print final result
+    print("___MEMORY USAGE AFTER COMPLETION:___")
+    mem_usg = props.memory_usage().sum() / 1024**2
+    print("Memory usage is: ", mem_usg, " MB")
+    print("This is ", 100*mem_usg/start_mem_usg, "% of the initial size")
+    return props, NAlist
