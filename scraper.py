@@ -16,10 +16,12 @@ for url in reversed(urls):
     print('Baixando', url, )
     file_path = os.path.join('downloads', url.split('/')[-1])
 
-    if os.path.exists(file_path) is False:
+    # se for o arquivo do ano atual, faz o download
+    if str(datetime.today().year) in url:
         utils.download(url, None, file_path)
 
-    break
+    if os.path.exists(file_path) is False:
+        utils.download(url, None, file_path)
 
 
 processa.main()

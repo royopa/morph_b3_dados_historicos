@@ -166,7 +166,6 @@ def gerar_arquivo_final(extraidos_path, base_path):
             file_path,
             colspecs=layout.get_posicoes(),
             skiprows=1,
-            # skipfooter=1,
             names=layout.get_campos(),
             encoding='latin1',
             dtype={'PRAZOT': 'object'},
@@ -196,18 +195,25 @@ def gerar_arquivo_final(extraidos_path, base_path):
             df['VOLTOT'] = df['VOLTOT'].astype(float)
             df['PREEXE'] = df['PREEXE'].astype(float)
             df['INDOPC'] = df['INDOPC']
-            df['DATVEN'] = df['DATVEN']
+            df['DATVEN'] = df['DATVEN'].astype(str)
             df['FATCOT'] = df['FATCOT']
             df['PTOEXE'] = df['PTOEXE'].astype(float)
             df['CODISI'] = df['CODISI'].astype(str)
             df['DISMES'] = df['DISMES']
 
-            #df, NAlist = reduce_mem_usage(df)
-
             # Converte campo de data
             df['DATA'] = pd.to_datetime(
                 df['DATA'], format='%Y%m%d', errors='coerce'
             ).dt.date
+
+            # Converte campo de data
+            df['DATVEN'] = pd.to_datetime(
+                df['DATVEN'], format='%Y%m%d', errors='coerce'
+            )
+
+            # remove os registros de filler
+            selecao = df['TIPREG'] == 99
+            df = df[~selecao]
 
             print('Importando para a base scraperwiki')
             import_scraperwiki(df)
@@ -223,9 +229,8 @@ def import_scraperwiki(df):
         'CODISI'
     ]
 
-    # if os.path.exists('data.sqlite') is False:
-    #print('Salvando csv de saída', len(df), 'registros')
-    #df.to_csv('base_completa.csv', index=False, mode='a')
+    print('Salvando csv de saída', len(df), 'registros')
+    df.to_csv('base_completa.csv', index=False, mode='a')
 
     engine = create_engine('sqlite:///data.sqlite', echo=True)
     sqlite_connection = engine.connect()
